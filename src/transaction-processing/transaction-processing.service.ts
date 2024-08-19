@@ -61,20 +61,22 @@ export class TransactionProcessingService {
   }
 
   // Method to get the maximum reference value
-  private async getMaxReference(): Promise<number> {
+  private async getMaxReference(): Promise<string> {
     const maxReference = await this.reconciliationRepository
       .createQueryBuilder('reconciliation')
       .select('MAX(reconciliation.reference)', 'max')
       .getRawOne();
-    return (parseInt(maxReference.max, 10) || 0) + 1;
+    const nextReference = (parseInt(maxReference.max, 10) || 0) + 1;
+    return nextReference.toString().padStart(7, '0');
   }
   // Method to get the maximum reference value
-  private async getMaxCancellationReference(): Promise<number> {
+  private async getMaxCancellationReference(): Promise<string> {
     const maxReference = await this.reconciliationRepository
       .createQueryBuilder('reconciliation')
       .select('MAX(reconciliation.cancellation_number)', 'max')
       .getRawOne();
-    return (parseInt(maxReference.max, 10) || 0) + 1;
+    const nextReference = (parseInt(maxReference.max, 10) || 0) + 1;
+    return nextReference.toString().padStart(7, '0');
   }
 
   // Method to process approval with partial funding
@@ -110,12 +112,18 @@ export class TransactionProcessingService {
     const newReference = await this.getMaxReference();
 
     // Update the original reconciliation
+    const remainingBalance =
+      reconciliation.credit_amount -
+      amount_used +
+      (reconciliation.amount_used ?? 0);
+
     reconciliation.amount_used =
       (reconciliation.amount_used ?? 0) + amount_used;
-    reconciliation.balance =
-      reconciliation.credit_amount - reconciliation.amount_used;
+
+    reconciliation.balance = Math.abs(remainingBalance);
+
     reconciliation.approved_one = true;
-    reconciliation.approvalOne = user;
+    reconciliation.approval_one = user as Account;
     reconciliation.reconcile_date_one = new Date().toISOString();
     reconciliation.reference = newReference.toString();
     reconciliation.way_bill_number = waybill_number;
@@ -136,25 +144,26 @@ export class TransactionProcessingService {
   ) {
     try {
       // Update the original reconciliation
-      const remainingBalance =
-        (reconciliation.balance ?? reconciliation.credit_amount) - amount;
-      reconciliation.amount_used = (reconciliation.amount_used ?? 0) + amount;
-      reconciliation.balance = remainingBalance;
+      const amount_used = amount + (reconciliation.amount_used ?? 0);
 
-      reconciliation.amount_used = (reconciliation.amount_used ?? 0) + amount;
-      reconciliation.balance = remainingBalance;
+      const remainingBalance = reconciliation.credit_amount - amount_used;
+      reconciliation.amount_used = amount_used;
+
+      reconciliation.balance = Math.abs(remainingBalance);
 
       const newReference = await this.getMaxReference();
 
       // Create a new transaction for the partial fund
       const newReconciliation = this.reconciliationRepository.create({
-        ...reconciliation,
+        remarks: reconciliation.remarks + ' Partial funding',
+        value_date: new Date().toISOString(),
         way_bill_number: waybill_number,
         reference: newReference.toString(),
         credit_amount: amount,
+        amount_used: amount,
         balance: amount,
         approved_one: true,
-        approvalOne: user,
+        approval_one: user as Account,
         reconcile_date_one: new Date().toISOString(),
         parent_id: reconciliation.id,
       });
@@ -163,6 +172,8 @@ export class TransactionProcessingService {
         reconciliation,
         newReconciliation,
       ]);
+      console.log({ partialId: newReconciliation.id });
+      console.log({ user: user.id });
 
       return { success: true, message: 'Partial funding processed' };
     } catch (err) {
@@ -178,14 +189,13 @@ export class TransactionProcessingService {
     const reconciliation = await this.reconciliationRepository.findOne({
       where: { id: reconciliationId, approved_one: true, approved_two: false },
     });
-
     if (!reconciliation) {
       throw new Error('Reconciliation not found or already approved');
     }
 
     // Update the original reconciliation
     reconciliation.approved_two = true;
-    reconciliation.approvalTwo = user;
+    reconciliation.approval_two = user;
     reconciliation.reconcile_date_two = new Date().toISOString();
     await this.reconciliationRepository.save(reconciliation);
 
@@ -234,7 +244,7 @@ export class TransactionProcessingService {
   // get all, with optional filter by date, amount, approvals ets
   async getAllReconciliations(
     filters: Partial<
-      Reconciliation & { dateRange?: [string, string]; singleDate?: string }
+      Reconciliation & { dateRange?: [string, string]; start_date?: string }
     >,
     limit: number,
     offset: number,
@@ -258,9 +268,9 @@ export class TransactionProcessingService {
         }
 
         // Filter by single date
-        if (filters.singleDate) {
-          queryBuilder.andWhere('reconciliation.value_date = :singleDate', {
-            singleDate: filters.singleDate,
+        if (filters.start_date) {
+          queryBuilder.andWhere('reconciliation.value_date = :start_date', {
+            start_date: filters.start_date,
           });
         }
 
@@ -299,6 +309,55 @@ export class TransactionProcessingService {
       // Execute the query
       const reconciliations = await queryBuilder.getMany();
       return reconciliations;
+    } catch (err) {
+      return error('Failed to fetch reconciliations', 500);
+    }
+  }
+
+  async getFinalReconciliationReport(filters: {
+    start_date?: string;
+    end_date?: string;
+  }): Promise<any> {
+    try {
+      const { start_date, end_date } = filters;
+      const queryBuilder = this.reconciliationRepository
+        .createQueryBuilder('reconciliation')
+        .where('reconciliation.approved_one = :stageOne', { stageOne: true })
+        .andWhere('reconciliation.approved_two = :stageTwo', {
+          stageTwo: true,
+        });
+
+      // Apply filters
+      if (filters) {
+        if (filters.start_date) {
+          queryBuilder.andWhere(
+            'reconciliation.value_date BETWEEN :start_date AND :end_date',
+            {
+              start_date,
+              end_date,
+            },
+          );
+        }
+      }
+      queryBuilder.leftJoinAndSelect(
+        'reconciliation.approval_one',
+        'approvalOne',
+      );
+      queryBuilder.leftJoinAndSelect(
+        'reconciliation.approval_two',
+        'approvalTwo',
+      );
+      queryBuilder.select([
+        'reconciliation.*',
+        'approvalOne.id',
+        'approvalOne.firstname',
+        'approvalOne.lastname',
+        'approvalTwo.id',
+        'approvalTwo.firstname',
+        'approvalTwo.lastname',
+      ]);
+      const reconciliations = await queryBuilder.getMany();
+      return success(reconciliations, 'Record fetched successfully');
     } catch (err) {
       return error('Failed to fetch reconciliations', 500);
     }

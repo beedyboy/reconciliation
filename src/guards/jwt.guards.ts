@@ -23,7 +23,7 @@ export class JwtGuard extends AuthGuard('jwt') {
     try {
       const decodedToken = this.jwtService.verify(token);
       // console.log('decodedToken', decodedToken);
-      request.user = decodedToken;
+      request.user = decodedToken.user;
       return true;
     } catch (error) {
       throw new UnauthorizedException('Invalid JWT token');

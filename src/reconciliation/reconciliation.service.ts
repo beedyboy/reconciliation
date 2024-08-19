@@ -29,29 +29,19 @@ export class ReconciliationService {
   async filterRecord(body: FetchApproveDTO) {
     try {
       // const condition: Partial<Reconciliation> = { ...body };
-      const { approve_one, approve_two } = body;
-      // if (key === 'approved_one') {
-      //   condition.approved_one = value;
-      // }
-      // if (key === 'approved_two') {
-      //   condition.approved_one = true;
-      //   condition.approved_two = value;
-      console.log(body);
-      // }
+      const { approved_one, approved_two } = body;
+
       const query =
-        await this.reconciliationRepository.createQueryBuilder(
-          'reconciliation',
-        );
-      if (approve_one) {
-        query.andWhere('reconciliation.approved_one = :approve_one', {
-          approve_one,
-        });
-      }
-      if (approve_two) {
-        query.andWhere('reconciliation.approved_two = :approve_two', {
-          approve_two,
-        });
-      }
+        this.reconciliationRepository.createQueryBuilder('reconciliation');
+
+      query.andWhere('reconciliation.approved_one = :stageOne', {
+        stageOne: approved_one,
+      });
+
+      query.andWhere('reconciliation.approved_two = :stageTwo', {
+        stageTwo: approved_two,
+      });
+
       const statements = await query.getMany();
 
       //   .find({

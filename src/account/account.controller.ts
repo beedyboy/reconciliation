@@ -8,7 +8,6 @@ import {
   Param,
   Res,
   ParseIntPipe,
-  UseInterceptors,
   UseGuards,
   HttpStatus,
   HttpCode,
@@ -16,12 +15,9 @@ import {
 } from '@nestjs/common';
 import { AccountService } from './account.service';
 import { Account } from 'src/entities/account.entity';
-import { HideSensitiveDataInterceptor } from 'src/interceptors/sensitive.interceptor';
 import { JwtGuard } from 'src/guards/jwt.guards';
 import { User } from 'src/utils/user.decorator';
-import { success } from 'src/utils/api-response.util';
 import { RefreshTokenGuard } from 'src/guards/refreshToken.guard';
-import { max } from 'moment';
 
 @Controller('accounts')
 // @UseInterceptors(HideSensitiveDataInterceptor)
@@ -45,6 +41,15 @@ export class AccountController {
     @Body() accountData: Partial<Account>,
   ) {
     return await this.accountService.updateAccount(id, accountData);
+  }
+
+  @Put('profile/update')
+  @UseGuards(JwtGuard)
+  async updateMyProfile(
+    @User('user') user: Partial<Account>,
+    @Body() accountData: Partial<Account>,
+  ) {
+    return await this.accountService.updateAccount(user.id, accountData);
   }
 
   @Get('profile')
@@ -89,6 +94,7 @@ export class AccountController {
   @Get('refresh-token')
   async refreshTokens(@User('user') user: Partial<Account>, @Res() response) {
     try {
+      console.log('refreshing tokens', user);
       const tokens = await this.accountService.refreshTokens(user);
       response.cookie('auth_token', tokens.accessToken, {
         httpOnly: true,
@@ -96,11 +102,14 @@ export class AccountController {
         secure: process.env.NODE_ENV === 'production',
       });
 
-      return success({ refresh: tokens.refreshToken }, 'Session refreshed');
+      return response.status(200).json({
+        message: 'Session refreshed successfully',
+        refresh: tokens.refreshToken,
+      });
     } catch (error) {
       throw new HttpException(
         error(`Error: ${error.message}`),
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        HttpStatus.BAD_REQUEST,
       );
     }
   }

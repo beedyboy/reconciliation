@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Delete,
-  Param,
-  Body,
-  ParseBoolPipe,
-} from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Body } from '@nestjs/common';
 import { ReconciliationService } from './reconciliation.service';
 import { FetchApproveDTO } from 'src/dtos/reconciliation.dto';
 
@@ -20,9 +12,7 @@ export class ReconciliationController {
   }
 
   @Post('filter')
-  async filterRecord(
-    @Body() body: FetchApproveDTO,
-  ) {
+  async filterRecord(@Body() body: FetchApproveDTO) {
     return this.reconciliationService.filterRecord(body);
   }
 

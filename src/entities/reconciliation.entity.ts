@@ -44,7 +44,7 @@ export class Reconciliation {
     onUpdate: 'CASCADE',
   })
   @JoinColumn({ name: 'approval_one' })
-  approvalOne: Account;
+  approval_one: Account;
 
   @ManyToOne(() => Account, {
     nullable: true,
@@ -52,7 +52,7 @@ export class Reconciliation {
     onUpdate: 'CASCADE',
   })
   @JoinColumn({ name: 'approval_two' })
-  approvalTwo: Account;
+  approval_two: Account;
 
   @Column({ length: 30, nullable: true })
   reference: string;
@@ -65,7 +65,7 @@ export class Reconciliation {
     onDelete: 'CASCADE',
     onUpdate: 'CASCADE',
   })
-  @JoinColumn({ name: 'approval_two' })
+  @JoinColumn()
   overTurnedBy: Account;
 
   @Column({ length: 30, nullable: true })

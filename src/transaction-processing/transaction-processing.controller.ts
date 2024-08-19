@@ -47,7 +47,7 @@ export class TransactionProcessingController {
   async approveTransaction(
     @Param('id') reconciliationId: number,
     @Body() payload: ApproveOneDTO,
-    @User('user') user: any,
+    @User('user') user: Account,
   ) {
     return await this.transactionProcessingService.processStageOneApproval(
       reconciliationId,
@@ -97,12 +97,12 @@ export class TransactionProcessingController {
     @Query('approved_one') approvedOne?: string,
     @Query('approved_two') approvedTwo?: string,
     @Query('dateRange') dateRange?: string,
-    @Query('singleDate') singleDate?: string,
+    @Query('start_date') start_date?: string,
     @Query('limit', new ParseIntPipe()) limit = 10,
     @Query('offset', new ParseIntPipe()) offset = 0,
   ): Promise<Reconciliation[] | { error: string; statusCode: number }> {
     const filters: Partial<
-      Reconciliation & { dateRange?: [string, string]; singleDate?: string }
+      Reconciliation & { dateRange?: [string, string]; start_date?: string }
     > = {};
 
     if (approvedOne !== undefined) {
@@ -117,14 +117,28 @@ export class TransactionProcessingController {
       filters.dateRange = dateRange.split(',') as [string, string];
     }
 
-    if (singleDate) {
-      filters.singleDate = singleDate;
+    if (start_date) {
+      filters.start_date = start_date;
     }
 
     return await this.transactionProcessingService.getAllReconciliations(
       filters,
       limit,
       offset,
+    );
+  }
+  // getAllReconciliations
+
+  @Get('final-report')
+  @UseGuards(JwtGuard)
+  async getFinalReconciliationReport(
+    @Query('start_date') start_date?: string,
+    @Query('end_date') end_date?: string,
+  ): Promise<Reconciliation[] | { error: string; statusCode: number }> {
+    const filters = { start_date, end_date };
+console.log(filters)
+    return await this.transactionProcessingService.getFinalReconciliationReport(
+      filters,
     );
   }
 }

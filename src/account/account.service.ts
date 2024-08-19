@@ -82,7 +82,7 @@ export class AccountService {
       staff.lastname = accountData.lastname;
       staff.phone = accountData.phone;
       staff.address = accountData.address;
-      console.log({ staff, accountData });
+      staff.position = accountData.position;
       await this.accountRepository.save(staff);
       const updatedAccount = await this.accountRepository.findOne({
         where: { id },
@@ -142,7 +142,7 @@ export class AccountService {
       // Set the access token as an HttpOnly cookie
       response.cookie('auth_token', accessToken, {
         httpOnly: true,
-        maxAge: 60 * 60 * 1000, // 1hour
+        maxAge: 60 * 60 * 3000, // 1hour
       });
 
       let roles;
@@ -202,9 +202,7 @@ export class AccountService {
       );
     }
 
-    const tokens = await this.generateRefreshAndAccessToken(user);
-
-    return tokens;
+    return await this.generateRefreshAndAccessToken(user);
   }
 
   async delAccount(id: number) {

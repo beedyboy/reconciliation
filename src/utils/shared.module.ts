@@ -5,6 +5,7 @@ import { JwtStrategy } from '../guards/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { Account } from 'src/entities/account.entity';
+import { RefreshTokenStrategy } from 'src/guards/refreshToken.strategy';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { Account } from 'src/entities/account.entity';
       inject: [ConfigService],
     }),
   ],
-  providers: [JwtGuard, JwtStrategy, Logger],
+  providers: [JwtGuard, JwtStrategy, RefreshTokenStrategy, Logger],
   exports: [JwtGuard, JwtStrategy, JwtModule, Logger, TypeOrmModule],
 })
 export class SharedModule {}
