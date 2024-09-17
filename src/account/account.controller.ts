@@ -17,6 +17,7 @@ import { AccountService } from './account.service';
 import { Account } from 'src/entities/account.entity';
 import { JwtGuard } from 'src/guards/jwt.guards';
 import { User } from 'src/utils/user.decorator';
+import { Response } from 'express';
 import { RefreshTokenGuard } from 'src/guards/refreshToken.guard';
 
 @Controller('accounts')
@@ -112,5 +113,17 @@ export class AccountController {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('/logout')
+  async logout(@Res() res: Response) {
+    res.clearCookie('auth_token', { path: '/', httpOnly: true });
+    res.clearCookie('refresh_token', { path: '/', httpOnly: true });
+
+    return res.status(HttpStatus.OK).json({
+      message: 'Logout successful',
+      status: true,
+    });
   }
 }

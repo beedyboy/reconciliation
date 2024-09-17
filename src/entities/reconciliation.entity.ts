@@ -24,6 +24,9 @@ export class Reconciliation {
   credit_amount: number;
 
   @Column('float', { nullable: true })
+  credit_amount_to_use: number;
+
+  @Column('float', { nullable: true })
   amount_used: number;
 
   @Column('float', { nullable: true })

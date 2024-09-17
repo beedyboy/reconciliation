@@ -7,10 +7,10 @@ export class DashboardController {
 
   @Get('/stats')
   async dashboardState(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+    @Query('start_date') start_date: string,
+    @Query('end_date') end_date: string,
   ) {
-    return await this.dashboardService.getStats(startDate, endDate);
+    return await this.dashboardService.getStats(start_date, end_date);
   }
 
   @Get('/closed-records')

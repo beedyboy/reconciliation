@@ -136,9 +136,12 @@ export class TransactionProcessingController {
     @Query('end_date') end_date?: string,
   ): Promise<Reconciliation[] | { error: string; statusCode: number }> {
     const filters = { start_date, end_date };
-console.log(filters)
     return await this.transactionProcessingService.getFinalReconciliationReport(
       filters,
     );
+  }
+  @Get('migrate')
+  async migrateReconciliations() {
+    return await this.transactionProcessingService.updateReconciliations();
   }
 }

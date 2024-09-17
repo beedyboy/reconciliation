@@ -61,7 +61,6 @@ export class AccountService {
         if (accountData.roles) {
           account.hasRoles = true;
         }
-
         await this.accountRepository.save(account);
         return success(account, 'Account created successfully');
       } else {
