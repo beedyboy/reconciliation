@@ -37,12 +37,6 @@ export class DashboardService {
         const endOfEndDate = new Date(endDate.setHours(23, 59, 59, 999));
         dateFilter['updatedAt'] = Between(startOfEndDate, endOfEndDate);
       }
-      // startDate && endDate
-      //   ? {
-      //       updatedAt: Between(new Date(startDate), new Date(endDate)),
-      //       // createdAt: Between(new Date(startDate), new Date(endDate)),
-      //     }
-      //   : {};
 
       const totalAccounts = await this.accountRepository.count();
       const totalReconciliations = await this.reconciliationRepository.count();

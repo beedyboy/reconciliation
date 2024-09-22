@@ -341,7 +341,16 @@ export class TransactionProcessingService {
     end_date?: string;
   }): Promise<any> {
     try {
-      const { start_date, end_date } = filters;
+      let { start_date, end_date } = filters;
+
+      // Convert DD-MM-YYYY to YYYY-MM-DD if the dates are provided
+      if (start_date) {
+        start_date = moment(start_date, 'DD-MM-YYYY').format('YYYY-MM-DD');
+      }
+      if (end_date) {
+        end_date = moment(end_date, 'DD-MM-YYYY').format('YYYY-MM-DD');
+      }
+
       const queryBuilder = this.reconciliationRepository
         .createQueryBuilder('reconciliation')
         .where('reconciliation.approved_one = :stageOne', { stageOne: true })
@@ -349,34 +358,18 @@ export class TransactionProcessingService {
           stageTwo: true,
         });
 
-      // Apply date filters with UTC start and end of day handling
+      // Apply date filters (without considering time)
       if (start_date) {
-        const startDate = new Date(this.formatDateForSQL(start_date));
-        const startOfStartDate = new Date(startDate.setHours(0, 0, 0, 0));
-        const endOfStartDate = new Date(startDate.setHours(23, 59, 59, 999));
-
         queryBuilder.andWhere(
-          'reconciliation.reconcile_date_two BETWEEN :startOfStartDate AND :endOfStartDate',
-          {
-            startOfStartDate: startOfStartDate.toISOString(),
-            endOfStartDate: endOfStartDate.toISOString(),
-          },
+          'DATE(reconciliation.reconcile_date_two) >= :start_date',
+          { start_date },
         );
       }
 
       if (end_date) {
-        const startDate = new Date(this.formatDateForSQL(start_date));
-        const startOfStartDate = new Date(startDate.setUTCHours(0, 0, 0, 0));
-
-        const endDate = new Date(end_date);
-        const endOfEndDate = new Date(endDate.setUTCHours(23, 59, 59, 999));
-
         queryBuilder.andWhere(
-          'reconciliation.reconcile_date_two BETWEEN :startOfStartDate AND :endOfDate',
-          {
-            startOfStartDate: startOfStartDate.toISOString(),
-            endOfDate: endOfEndDate.toISOString(),
-          },
+          'DATE(reconciliation.reconcile_date_two) <= :end_date',
+          { end_date },
         );
       }
 
@@ -419,7 +412,80 @@ export class TransactionProcessingService {
       const reconciliations = await queryBuilder.getRawMany();
       return success(reconciliations, 'Record fetched successfully');
     } catch (err) {
-      return error('Failed to fetch reconciliations', 500);
+      console.log({ err });
+      return error('Failed to fetch reconciliations', 200);
+    }
+  }
+
+  async getFinalReconciliationReport2(filters: {
+    start_date?: string;
+    end_date?: string;
+  }): Promise<any> {
+    try {
+      const { start_date, end_date } = filters;
+      const queryBuilder = this.reconciliationRepository
+        .createQueryBuilder('reconciliation')
+        .where('reconciliation.approved_one = :stageOne', { stageOne: true })
+        .andWhere('reconciliation.approved_two = :stageTwo', {
+          stageTwo: true,
+        });
+
+      // Apply date filters (without considering time)
+      if (start_date) {
+        queryBuilder.andWhere(
+          'DATE(reconciliation.reconcile_date_two) >= :start_date',
+          { start_date },
+        );
+      }
+
+      if (end_date) {
+        queryBuilder.andWhere(
+          'DATE(reconciliation.reconcile_date_two) <= :end_date',
+          { end_date },
+        );
+      }
+
+      queryBuilder.leftJoinAndSelect(
+        'reconciliation.approval_one',
+        'approvalOne',
+      );
+      queryBuilder.leftJoinAndSelect(
+        'reconciliation.approval_two',
+        'approvalTwo',
+      );
+      queryBuilder.select([
+        'reconciliation.id AS id',
+        'reconciliation.value_date AS value_date',
+        'reconciliation.remarks AS remarks',
+        'reconciliation.credit_amount AS credit_amount',
+        'reconciliation.amount_used AS amount_used',
+        'reconciliation.balance AS balance',
+        'reconciliation.customer AS customer',
+        'reconciliation.approved_one AS approved_one',
+        'reconciliation.approved_two AS approved_two',
+        'reconciliation.reference AS reference',
+        'reconciliation.way_bill_number AS way_bill_number',
+        'reconciliation.cancellation_number AS cancellation_number',
+        'reconciliation.cancellation_date AS cancellation_date',
+        'reconciliation.reconcile_date_one AS reconcile_date_one',
+        'reconciliation.reconcile_date_two AS reconcile_date_two',
+        'reconciliation.createdAt AS createdAt',
+        'reconciliation.updatedAt AS updatedAt',
+        'reconciliation.parent_id AS parentId',
+        'reconciliation.overTurnedById AS overTurnedById',
+        'approvalOne.id AS approvalOneId',
+        'approvalOne.firstname AS approvalOneFirstname',
+        'approvalOne.lastname AS approvalOneLastname',
+        'approvalTwo.id AS approvalTwoId',
+        'approvalTwo.firstname AS approvalTwoFirstname',
+        'approvalTwo.lastname AS approvalTwoLastname',
+      ]);
+
+      const reconciliations = await queryBuilder.getRawMany();
+      return success(reconciliations, 'Record fetched successfully');
+    } catch (err) {
+      console.log({ err });
+      return error('Failed to fetch reconciliations', 200);
     }
   }
 
