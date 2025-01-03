@@ -43,7 +43,7 @@ export class TransactionProcessingService {
         };
         const check = await this.reconciliationRepository.findOne({
           where: {
-            value_date: moment(valueDate).format('DD-MM-YYYY'),
+            // value_date: moment(valueDate).format('DD-MM-YYYY'),
             remarks: row[4] || 'N/A',
           },
         });

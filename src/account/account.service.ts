@@ -124,7 +124,7 @@ export class AccountService {
       });
 
       if (!account) {
-        return response.status(404).json({ error: "User doesn't exist" });
+        return response.status(200).json({ error: "User doesn't exist" });
       }
 
       const checkPassword = await bcrypt.compare(password, account.password);
@@ -165,7 +165,7 @@ export class AccountService {
         refreshToken,
       });
     } catch (err) {
-      return response.status(500).json({ error: 'Internal server error' });
+      return response.status(400).json({ error: 'Internal server error' });
     }
   }
 

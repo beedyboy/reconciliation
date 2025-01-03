@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Reflector } from '@nestjs/core';
@@ -29,40 +30,10 @@ export class RolesGuard implements CanActivate {
       request.user = decodedToken;
       return true;
     } catch (error) {
-      throw new UnauthorizedException('Invalid JWT token');
+      throw new ForbiddenException(
+        'Forbidden: You do not have permission to access this resource',
+      );
     }
-
-    // if (request?.user) {
-    //   const user = request.user;
-
-    //   //check user with the user service using userId
-    //   const userExists = await this.authService.findUserById(user.userId);
-    //   const userRole = { ...userExists.account };
-    //   if (!userExists) {
-    //     throw new NotFoundException({
-    //       message: 'Not Found',
-    //       status: false,
-    //       statuscode: HttpStatus.NOT_FOUND,
-    //       data: 'User does not exist',
-    //     });
-    //   }
-    //   //check roles with the user service
-    //   if (userRole.role !== user.role) {
-    //     throw new HttpException(
-    //       {
-    //         message: 'Access Denied!!!',
-    //         status: false,
-    //         statuscode: HttpStatus.UNAUTHORIZED,
-    //         data: 'You do not have the permission to access this route',
-    //       },
-    //       HttpStatus.UNAUTHORIZED,
-    //     );
-    //   }
-    //   //check roles with the auth service using userId
-    //   return roles.includes(user.role);
-    // }
-    // // return false;
-    // return false;
   }
 
   private extractTokenFromRequest(request: Request): string | null {
